@@ -13,3 +13,14 @@ Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
 
 The page will reload when you make changes.\
 You may also see any lint errors in the console.
+
+## Want to contribute?
+PRs are welcome!
+
+## Suggestions?
+Feel free to open an issue :)
+
+## Feeling generous?
+Was this useful for you and you're feeling generous? Feel free to send any coin to this Solana wallet:
+
+> 7EtuuNs8jqpEUhiCQxf25mUiLzoMuCBkTnjK4YrZC5Bd
