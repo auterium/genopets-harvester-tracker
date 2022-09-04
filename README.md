@@ -14,6 +14,12 @@ Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
 The page will reload when you make changes.\
 You may also see any lint errors in the console.
 
+## Features
+- Fetches data using any Solana address as input
+- List all habitats owned by wallet
+- List all tenants for the landlord
+- List all pending harvests for the habitats
+
 ## Want to contribute?
 PRs are welcome!
 
