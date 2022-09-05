@@ -2,8 +2,9 @@ import React, { useReducer, useState } from 'react';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { Metaplex } from "@metaplex-foundation/js";
 import { Program, AnchorProvider } from '@project-serum/anchor';
+import { Container, Row, Col, Form, Button, Table } from 'react-bootstrap';
 import idl from './genopets_idl';
-import './App.css';
+import 'bootstrap/dist/css/bootstrap.min.css';
 
 const connection = new Connection('https://solana-api.projectserum.com');
 const metaplex = Metaplex.make(connection);
@@ -55,6 +56,7 @@ function App() {
       const habitatDatas = await habitatManager.account.habitatData.fetchMultiple(habitatKeys);
 
       for (const habitatData of habitatDatas) {
+        habitatData.sequence = habitatData.sequence.toNumber()
         habitats[habitatData.habitatMint.toBase58()].habitatData = habitatData;
       }
 
@@ -148,121 +150,129 @@ function App() {
   const humanDate = date => date.toISOString().substring(0, 16).replace('T', ' ') + ' UTC';
 
   return (
-    <div className="wrapper">
-      <form onSubmit={handleSumbit}>
-        <h1>Genopets harvests tracker</h1>
-        <fieldset>
-          <label>
-            <p>Landlord address</p>
-            <input name='landlord' onChange={handleChange} />
-          </label>
-        </fieldset>
-        <button type="submit">Submit</button>
-      </form>
+    <Container>
+      <h1>Genopets harvests tracker</h1>
+      <Form onSubmit={handleSumbit}>
+        <Form.Group className='row'>
+          <Form.Label className='col-sm-2 col-form-label'>Landlord wallet</Form.Label>
+          <Col className='col-sm-4'>
+            <Form.Control type='text' name='landlord' onChange={handleChange}></Form.Control>
+          </Col>
+          <Col className='col-sm-6'>
+            <Button variant='primary' type='submit'>Search</Button>
+          </Col>
+        </Form.Group>
+      </Form>
       {searching && <div>Fetching harvests</div>}
-      <div>
-        <h2>Habitats</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Name</th>
-              <th>Level</th>
-              <th>Element</th>
-              <th>Expiry timestamp (end of lifespan)</th>
-              <th>Harvester</th>
-              <th>Harvester royalty</th>
-              <th>Total KI harvested</th>
-              <th>Durability</th>
-              <th>Habitats terraformed</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.entries(habitats).sort(([, a], [, b]) => a.name > b.name ? 1 : a.name < b.name ? -1 : 0).map(([id, { name, habitatData }], i) => (
-              <tr key={ id }>
-                <td>{ i + 1 }</td>
-                <td>{ name }</td>
-                <td>{ habitatData.level }</td>
-                <td>{ habitatData.element }</td>
-                <td>{ humanDate(new Date(habitatData.expiryTimestamp * 1000)) }</td>
-                <td>{ new PublicKey(habitatData.harvester).toBase58() !== PublicKey.default.toBase58() && new PublicKey(habitatData.harvester).toBase58().substring(0, 8) + '...' }</td>
-                <td>{ parseFloat((habitatData.harvesterRoyaltyBips / 100).toFixed(2)) }%</td>
-                <td>{ parseFloat((habitatData.totalKiHarvested.toNumber() / 10**9).toFixed(2)) }</td>
-                <td>{ habitatData.durability }</td>
-                <td>{ habitatData.habitatsTerraformed }</td>
+      <Row>
+        <Col>
+          <h2>Habitats</h2>
+          <Table striped bordered hover>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Name</th>
+                <th>Level</th>
+                <th>Element</th>
+                <th>Expiry timestamp (end of lifespan)</th>
+                <th>Harvester</th>
+                <th>Harvester royalty</th>
+                <th>Total KI harvested</th>
+                <th>Durability</th>
+                <th>Habitats terraformed</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div>
-        <h2>Tenants</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Player</th>
-              <th>Pending KI</th>
-              <th>Banned</th>
-              <th>Active</th>
-              <th>Last harvest for selected landlord</th>
-              <th>Last harvest</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.entries(tenants).map(([id, data], i) => (
-              <tr key={ id }>
-                <td>{ i + 1 }</td>
-                <td>{ id.substring(0, 8) }...</td>
-                <td>{ parseFloat(data.pendingKi.toFixed(2)) }</td>
-                <td>{ data.banned ? 'Yes' : 'No' }</td>
-                <td>{ data.active ? 'Yes' : 'No' }</td>
-                <td>{ data.lastHarvest.toISOString().substring(0, 16).replace('T', ' ') } UTC</td>
-                <td>{ data.lastHarvest2.toISOString().substring(0, 16).replace('T', ' ') } UTC</td>
+            </thead>
+            <tbody>
+              {Object.entries(habitats).sort(([, a], [, b]) => a.habitatData.sequence > b.habitatData.sequence ? 1 : a.habitatData.sequence < b.habitatData.sequence ? -1 : 0).map(([id, { name, habitatData }], i) => (
+                <tr key={ id }>
+                  <td>{ i + 1 }</td>
+                  <td>{ name }</td>
+                  <td>{ habitatData.level }</td>
+                  <td>{ habitatData.element }</td>
+                  <td>{ humanDate(new Date(habitatData.expiryTimestamp * 1000)) }</td>
+                  <td>{ new PublicKey(habitatData.harvester).toBase58() !== PublicKey.default.toBase58() && new PublicKey(habitatData.harvester).toBase58().substring(0, 8) + '...' }</td>
+                  <td>{ parseFloat((habitatData.harvesterRoyaltyBips / 100).toFixed(2)) }%</td>
+                  <td>{ parseFloat((habitatData.totalKiHarvested.toNumber() / 10**9).toFixed(2)) }</td>
+                  <td>{ habitatData.durability }</td>
+                  <td>{ habitatData.habitatsTerraformed }</td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </Col>
+      </Row>
+      <Row>
+        <Col>
+          <h2>Tenants</h2>
+          <Table striped bordered hover>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Player</th>
+                <th>Pending KI</th>
+                <th>Banned</th>
+                <th>Active</th>
+                <th>Last harvest for selected landlord</th>
+                <th>Last harvest</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div>
-        <h2>Pending harvests</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Player</th>
-              <th>KI amount</th>
-              <th>Harvester's KI</th>
-              <th>Landlord's KI</th>
-              <th>Habitat</th>
-              <th>Harvest date</th>
-              <th>Claim date</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pendingHarvests.map(({ id, player, startTime, endTime, amount, harvesterKi, landlordKi, habitat }, i) => (
-              <tr key={ id }>
-                <td>{ i + 1 }</td>
-                <td>{ player.substring(0, 8) }...</td>
-                <td>{ parseFloat(amount.toFixed(2)) }</td>
-                <td>{ parseFloat(harvesterKi.toFixed(2)) }</td>
-                <td>{ parseFloat(landlordKi.toFixed(2)) }</td>
-                <td>{ habitat }</td>
-                <td>{ startTime.toISOString().substring(0, 16).replace('T', ' ') } UTC</td>
-                <td>{ endTime.toISOString().substring(0, 16).replace('T', ' ') } UTC</td>
+            </thead>
+            <tbody>
+              {Object.entries(tenants).map(([id, data], i) => (
+                <tr key={ id }>
+                  <td>{ i + 1 }</td>
+                  <td>{ id.substring(0, 8) }...</td>
+                  <td>{ parseFloat(data.pendingKi.toFixed(2)) }</td>
+                  <td>{ data.banned ? 'Yes' : 'No' }</td>
+                  <td>{ data.active ? 'Yes' : 'No' }</td>
+                  <td>{ data.lastHarvest.toISOString().substring(0, 16).replace('T', ' ') } UTC</td>
+                  <td>{ data.lastHarvest2.toISOString().substring(0, 16).replace('T', ' ') } UTC</td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </Col>
+      </Row>
+      <Row>
+        <Col>
+          <h2>Pending harvests</h2>
+          <Table striped bordered hover>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Player</th>
+                <th>KI amount</th>
+                <th>Harvester's KI</th>
+                <th>Landlord's KI</th>
+                <th>Habitat</th>
+                <th>Harvest date</th>
+                <th>Claim date</th>
               </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr>
-              <th colSpan={4}>Pending landlord KI</th>
-              <th>{parseFloat(pendingHarvests.reduce((agg, { landlordKi }) => agg + landlordKi, 0).toFixed(2))}</th>
-              <th colSpan={3}>&nbsp;</th>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-    </div>
+            </thead>
+            <tbody>
+              {pendingHarvests.map(({ id, player, startTime, endTime, amount, harvesterKi, landlordKi, habitat }, i) => (
+                <tr key={ id }>
+                  <td>{ i + 1 }</td>
+                  <td>{ player.substring(0, 8) }...</td>
+                  <td>{ parseFloat(amount.toFixed(2)) }</td>
+                  <td>{ parseFloat(harvesterKi.toFixed(2)) }</td>
+                  <td>{ parseFloat(landlordKi.toFixed(2)) }</td>
+                  <td>{ habitat }</td>
+                  <td>{ startTime.toISOString().substring(0, 16).replace('T', ' ') } UTC</td>
+                  <td>{ endTime.toISOString().substring(0, 16).replace('T', ' ') } UTC</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr>
+                <th colSpan={4}>Pending landlord KI</th>
+                <th>{parseFloat(pendingHarvests.reduce((agg, { landlordKi }) => agg + landlordKi, 0).toFixed(2))}</th>
+                <th colSpan={3}>&nbsp;</th>
+              </tr>
+            </tfoot>
+          </Table>
+        </Col>
+      </Row>
+    </Container>
   );
 }
 
