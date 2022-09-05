@@ -1,23 +1,24 @@
 import React, { useReducer, useState } from 'react';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { Metaplex } from "@metaplex-foundation/js";
-import { Program, AnchorProvider } from '@project-serum/anchor';
+import { Program } from '@project-serum/anchor';
 import { Container, Row, Col, Form, Button, Table } from 'react-bootstrap';
 import idl from './genopets_idl';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-const connection = new Connection('https://solana-api.projectserum.com');
+const connection = new Connection('https://solape.genesysgo.net');
 const metaplex = Metaplex.make(connection);
 const programId = new PublicKey('HAbiTatJVqoCJd9asyr6RxMEdwtfrQugwp7VAFyKWb1g');
-const provider = new AnchorProvider(connection, { publicKey: PublicKey.default });
-const habitatManager = new Program(idl, programId, provider);
 
-const formReducer = (state, event) => {
-  return {
-    ...state,
-    [event.name]: event.value,
-  };
-}
+// Anchor programs have the `account` property which includes all the accounts from the IDL
+// in a `camelCase` format. Since these are models, they're mapped here in `PascalCase` to
+// distinguish them easily through the code
+const { account: { habitatData: HabitatData, lockedKi: LockedKi, playerData: PlayerData } } = new Program(idl, programId, { connection });
+
+const formReducer = (state, { name, value }) => ({
+  ...state,
+  [name]: value,
+});
 
 function App() {
   const [formData, setFormData] = useReducer(formReducer, {});
@@ -35,32 +36,33 @@ function App() {
       setSearching(true);
       setPendingHarvests([]);
       setTenants({});
+      setHabitats({});
 
       // Fetch all NFTs owned
       const nfts = await metaplex.nfts().findAllByOwner({ owner: landlordKey }).run();
-      // Convert results into a dictionary that only includes habitats
-      const habitats = nfts.reduce((agg, nft) => {
-        if(nft.symbol === 'HABITAT') {
-          agg[nft.mintAddress.toBase58()] = nft;
+      // Dictionary to map NFTs to their mint address
+      const habitats = {};
+      // Game data derived keys
+      const habitatKeys = [];
+
+      for (const nft of nfts) {
+        if (nft.symbol === 'HABITAT') {
+          habitats[nft.mintAddress.toBase58()] = nft;
+          habitatKeys.push(PublicKey.findProgramAddressSync(["habitat-data", nft.mintAddress.toBuffer()], programId)[0]);
         }
-
-        return agg;
-      }, {});
-
-      // Compute the game data derived keys
-      const habitatKeys = nfts
-        .filter(nft => nft.symbol === 'HABITAT')
-        .map(nft => PublicKey.findProgramAddressSync(["habitat-data", nft.mintAddress.toBuffer()], programId)[0]);
+      }
 
       // Fetch game data for the habitats
-      const habitatDatas = await habitatManager.account.habitatData.fetchMultiple(habitatKeys);
+      const habitatDatas = await HabitatData.fetchMultiple(habitatKeys);
 
+      // Add resulting data to habitats dictionary
       for (const habitatData of habitatDatas) {
-        habitatData.sequence = habitatData.sequence.toNumber()
+        habitatData.sequence = habitatData.sequence.toNumber();
         habitats[habitatData.habitatMint.toBase58()].habitatData = habitatData;
       }
 
-      const lockedKiEntries = await habitatManager.account.lockedKi.all([
+      // Fetch all locked KI entries for the landlord
+      const lockedKiEntries = await LockedKi.all([
         { dataSize: 1040 },
         { memcmp: { offset: 110, bytes: formData.landlord } },
       ]);
@@ -69,6 +71,7 @@ function App() {
       const tenants = {};
       const tenantPlayerDataKeys = [];
 
+      // Map to user-friendly data
       for (const { publicKey, account } of lockedKiEntries) {
         const player = account.player.toBase58();
         const landlord = account.landlord.toBase58();
@@ -120,7 +123,8 @@ function App() {
 
       pendingHarvests.sort((a, b) => a.endTime > b.endTime ? 1 : b.endTime > a.endTime ? -1 : 0);
 
-      const playerDataEntries = await habitatManager.account.playerData.fetchMultiple(tenantPlayerDataKeys);
+      // Fetch player data of the tenants
+      const playerDataEntries = await PlayerData.fetchMultiple(tenantPlayerDataKeys);
 
       for (const { player, active, banned, lastHarvestTimestamp } of playerDataEntries) {
         Object.assign(tenants[player.toBase58()], {
@@ -140,11 +144,8 @@ function App() {
     }
   };
 
-  const handleChange = event => {
-    setFormData({
-      name: event.target.name,
-      value: event.target.value,
-    });
+  const handleChange = ({ target: { name, value }}) => {
+    setFormData({ name, value });
   };
 
   const humanDate = date => date.toISOString().substring(0, 16).replace('T', ' ') + ' UTC';
@@ -176,7 +177,7 @@ function App() {
                 <th>Element</th>
                 <th>Expiry timestamp (end of lifespan)</th>
                 <th>Harvester</th>
-                <th>Harvester royalty</th>
+                <th>Royalty</th>
                 <th>Total KI harvested</th>
                 <th>Durability</th>
                 <th>Habitats terraformed</th>
