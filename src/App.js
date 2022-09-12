@@ -6,7 +6,7 @@ import { Container, Row, Col, Form, Button, Table } from 'react-bootstrap';
 import idl from './genopets_idl';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-const connection = new Connection('https://solape.genesysgo.net');
+const connection = new Connection('https://solana-api.projectserum.com');
 const metaplex = Metaplex.make(connection);
 const programId = new PublicKey('HAbiTatJVqoCJd9asyr6RxMEdwtfrQugwp7VAFyKWb1g');
 
